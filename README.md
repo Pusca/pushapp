@@ -46,49 +46,35 @@ A complete example with html+JS frontend and php backend using `web-push-php` ca
 
 ```php
 <?php
-
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 
-// store the client-side `PushSubscription` object (calling `.toJSON` on it) as-is and then create a WebPush\Subscription from it
+// Store the client-side `PushSubscription` object (calling `.toJSON` on it) as-is and then create a WebPush\Subscription from it.
 $subscription = Subscription::create(json_decode($clientSidePushSubscriptionJSON, true));
 
-// array of notifications
+// Array of push messages.
 $notifications = [
     [
         'subscription' => $subscription,
         'payload' => '{"message":"Hello World!"}',
     ], [
-          // current PushSubscription format (browsers might change this in the future)
-          'subscription' => Subscription::create([ 
-              "endpoint" => "https://example.com/other/endpoint/of/another/vendor/abcdef...",
-              "keys" => [
-                  'p256dh' => '(stringOf88Chars)',
-                  'auth' => '(stringOf24Chars)'
-              ],
-          ]),
-          'payload' => '{"message":"Hello World!"}',
-    ], [
-        // old Firefox PushSubscription format
-        'subscription' => Subscription::create([
-            'endpoint' => 'https://updates.push.services.mozilla.com/push/abc...', // Firefox 43+,
-            'publicKey' => 'BPcMbnWQL5GOYX/5LKZXT6sLmHiMsJSiEvIFvfcDvX7IZ9qqtq68onpTPEYmyxSQNiH7UD/98AUcQ12kBoxz/0s=', // base 64 encoded, should be 88 chars
-            'authToken' => 'CxVX6QsVToEGEcjfYPqXQw==', // base 64 encoded, should be 24 chars
+        // current PushSubscription format (browsers might change this in the future)
+        'subscription' => Subscription::create([ 
+            'endpoint' => 'https://example.com/other/endpoint/of/another/vendor/abcdef...',
+            'keys' => [
+                'p256dh' => '(stringOf88Chars)',
+                'auth' => '(stringOf24Chars)',
+            ],
+            // key 'contentEncoding' is optional and defaults to ContentEncoding::aes128gcm
         ]),
-        'payload' => 'hello !',
-    ], [
-        // old Chrome PushSubscription format
-        'subscription' => Subscription::create([
-            'endpoint' => 'https://fcm.googleapis.com/fcm/send/abcdef...',
-        ]),
-        'payload' => null,
+        'payload' => '{"message":"Hello World!"}',
     ], [
         // old PushSubscription format
         'subscription' => Subscription::create([
             'endpoint' => 'https://example.com/other/endpoint/of/another/vendor/abcdef...',
             'publicKey' => '(stringOf88Chars)',
             'authToken' => '(stringOf24Chars)',
-            'contentEncoding' => 'aesgcm', // one of PushManager.supportedContentEncodings
+            'contentEncoding' => 'aesgcm', // (optional) one of PushManager.supportedContentEncodings
         ]),
         'payload' => '{"message":"test"}',
     ]
@@ -96,16 +82,16 @@ $notifications = [
 
 $webPush = new WebPush();
 
-// send multiple notifications with payload
+// Send multiple push messages with payload.
 foreach ($notifications as $notification) {
     $webPush->queueNotification(
         $notification['subscription'],
-        $notification['payload'] // optional (defaults null)
+        $notification['payload'], // optional (defaults null)
     );
 }
 
 /**
- * Check sent results
+ * Check sent results.
  * @var MessageSentReport $report
  */
 foreach ($webPush->flush() as $report) {
@@ -119,7 +105,7 @@ foreach ($webPush->flush() as $report) {
 }
 
 /**
- * send one notification and flush directly
+ * Send one push message and flush directly.
  * @var MessageSentReport $report
  */
 $report = $webPush->sendOneNotification(

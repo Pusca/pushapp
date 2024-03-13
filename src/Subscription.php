@@ -15,22 +15,33 @@ namespace Minishlink\WebPush;
 
 class Subscription implements SubscriptionInterface
 {
+    protected ContentEncoding $contentEncoding;
     /**
-     * @param string|null $contentEncoding (Optional) Must be "aesgcm"
+     * This is a data class. No key validation is done.
+     * @param string|\Minishlink\WebPush\ContentEncoding $contentEncoding (Optional) defaults to "aes128gcm" as defined to rfc8291.
      * @throws \ErrorException
      */
     public function __construct(
-        private string  $endpoint,
-        private ?string $publicKey = null,
-        private ?string $authToken = null,
-        private ?string $contentEncoding = null
+        protected readonly string $endpoint,
+        protected readonly string $publicKey,
+        protected readonly string $authToken,
+        ContentEncoding|string  $contentEncoding = ContentEncoding::aes128gcm,
     ) {
-        if($publicKey || $authToken || $contentEncoding) {
-            $supportedContentEncodings = ['aesgcm', 'aes128gcm'];
-            if ($contentEncoding && !in_array($contentEncoding, $supportedContentEncodings, true)) {
-                throw new \ErrorException('This content encoding ('.$contentEncoding.') is not supported.');
+        if(is_string($contentEncoding)) {
+            try {
+                if(empty($contentEncoding)) {
+                    $this->contentEncoding = ContentEncoding::aesgcm; // default
+                } else {
+                    $this->contentEncoding = ContentEncoding::from($contentEncoding);
+                }
+            } catch(\ValueError) {
+                throw new \ValueError('This content encoding ('.$contentEncoding.') is not supported.');
             }
-            $this->contentEncoding = $contentEncoding ?: "aesgcm";
+        } else {
+            $this->contentEncoding = $contentEncoding;
+        }
+        if(empty($publicKey) || empty($authToken)) {
+            throw new \ValueError('Missing values.');
         }
     }
 
@@ -42,55 +53,37 @@ class Subscription implements SubscriptionInterface
     {
         if (array_key_exists('keys', $associativeArray) && is_array($associativeArray['keys'])) {
             return new self(
-                $associativeArray['endpoint'],
-                $associativeArray['keys']['p256dh'] ?? null,
-                $associativeArray['keys']['auth'] ?? null,
-                $associativeArray['contentEncoding'] ?? "aesgcm"
-            );
-        }
-
-        if (array_key_exists('publicKey', $associativeArray) || array_key_exists('authToken', $associativeArray) || array_key_exists('contentEncoding', $associativeArray)) {
-            return new self(
-                $associativeArray['endpoint'],
-                $associativeArray['publicKey'] ?? null,
-                $associativeArray['authToken'] ?? null,
-                $associativeArray['contentEncoding'] ?? "aesgcm"
+                $associativeArray['endpoint'] ?? "",
+                $associativeArray['keys']['p256dh'] ?? "",
+                $associativeArray['keys']['auth'] ?? "",
+                $associativeArray['contentEncoding'] ?? ContentEncoding::aes128gcm,
             );
         }
 
         return new self(
-            $associativeArray['endpoint']
+            $associativeArray['endpoint'] ?? "",
+            $associativeArray['publicKey'] ?? "",
+            $associativeArray['authToken'] ?? "",
+            $associativeArray['contentEncoding'] ?? ContentEncoding::aes128gcm,
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function getEndpoint(): string
     {
         return $this->endpoint;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function getPublicKey(): ?string
+    public function getPublicKey(): string
     {
         return $this->publicKey;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function getAuthToken(): ?string
+    public function getAuthToken(): string
     {
         return $this->authToken;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function getContentEncoding(): ?string
+    public function getContentEncoding(): ContentEncoding
     {
         return $this->contentEncoding;
     }
